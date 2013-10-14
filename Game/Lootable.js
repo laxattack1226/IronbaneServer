@@ -40,29 +40,12 @@ var Lootable = Unit.extend({
     },
     loadItems: function() {
         var self = this;
-        mysql.query('SELECT * FROM ib_items WHERE owner = ?', [self.id], function(err, results) {
-            if(err) {
-                throw 'error fetching items ' + err;
-            }
-
-            _.each(results, function(loot) {
-                // find a template
-                var template = dataHandler.items[loot.template];
-                if(template) {
-                    if (loot.data) {
-                        try {
-                            loot.data = JSON.parse(loot.data);
-                        } catch (e) {
-                            // some error parsing JSON, not valid JSON likely...
-                            console.log('error parsing JSON for item data', loot);
-                        }
-                    }
-                    // add new item, DB values take precendence over item's Init
-                    self.loot.push(new Item(template, loot));
-                } else {
-                    log('warning no template found for item: ' + loot.id);
-                }
-            });
+        // ok to be changing references here?
+        Item.getAllForOwner(self.id).then(function(items) {
+            self.loot = items;
+        }, function(err) {
+            log('Error getting items for Lootable: ' + self.id);
+            self.loot = [];
         });
     },
     Awake: function() {
@@ -70,10 +53,12 @@ var Lootable = Unit.extend({
     },
     Restock: function() {
         //    log("Restocking...");
-        this.loot = [];
+        var unit = this;
+        unit.loot = [];
+
         // Load loot from metadata (with percentages!)
-        if (!_.isEmpty(this.data.loot)) {
-            var lootSplit = this.data.loot.split(";");
+        if (!_.isEmpty(unit.data.loot)) {
+            var lootSplit = unit.data.loot.split(";");
             for (var l = 0; l < lootSplit.length; l++) {
                 var templateId = null;
                 var chanceSplit = lootSplit[l].split(":");
@@ -83,13 +68,11 @@ var Lootable = Unit.extend({
                 }
 
                 if (templateId) {
-                    if (_.isUndefined(dataHandler.items[templateId])) {
-                        log("Warning! item " + templateId + " not found for Lootable " + this.id + "!");
-                        continue;
-                    }
-
-                    var item = new Item(dataHandler.items[templateId], {slot: l});
-                    this.loot.push(item);
+                    ItemTemplate.get(templateId).then(function(template) {
+                        unit.loot.push(new Item(template, {slot: 1}));
+                    }, function(err) {
+                        log("Warning! item " + templateId + " not found for Lootable " + unit.id + "!");
+                    });
                 }
             }
         }
