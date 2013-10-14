@@ -18,10 +18,7 @@
 
 var Server = Class.extend({
     Init: function() {
-
-
         this.npcIDCount = -1;
-        this.itemIDCount = -1;
 
         mysql.query('SELECT MAX(id) as id FROM ib_units',
             function (err, result) {
@@ -30,15 +27,6 @@ var Server = Class.extend({
                 }
                 else {
                     server.npcIDCount = result[0].id;
-                }
-            });
-        mysql.query('SELECT MAX(id) as id FROM ib_items ORDER BY id DESC',
-            function (err, result) {
-                if ( result.length == 0 ) {
-                    server.itemIDCount = 0;
-                }
-                else {
-                    server.itemIDCount = result[0].id;
                 }
             });
 
@@ -53,15 +41,11 @@ var Server = Class.extend({
       log("Creating daily backup...");
       //chatHandler.announce("Performing auto-backup...", "blue");
       worldHandler.DoFullBackup();
-      setTimeout(function(){server.AutoBackup()}, 3600 * 24 * 1000);
+      setTimeout(function(){server.AutoBackup();}, 3600 * 24 * 1000);
     },
     GetAValidNPCID: function() {
         this.npcIDCount++;
         return -this.npcIDCount;
-    },
-    GetAValidItemID: function() {
-        this.itemIDCount++;
-        return this.itemIDCount;
     },
     Tick: function(dTime) {
 

@@ -81,6 +81,9 @@ module.exports = function(db, ItemTemplate) {
 
             // because it's possible that this item has more properties than the schema, we must specify
             var persist = _.pick(self, updateSchema);
+            // data has to be stringified on the way in
+            persist.data = JSON.stringify(persist.data);
+
             if(self.id) {
                 // update
                 db.query('update ib_items set ? where id=' + self.id, persist, function(err, result) {

@@ -222,6 +222,7 @@ module.exports = function(db) {
                 return;
             }
 
+            // todo: get rid of this, instead wherever calls it should have a biz rule to just do this if it wants to
             db.query('delete from ib_items where owner=?', [self.id], function(err, result) {
                 if(err) {
                     log('error deleting character items: ' + err);
@@ -250,7 +251,7 @@ module.exports = function(db) {
             }
 
             var outChar = new Character(results[0]);
-            // get equipment, for char select
+            // get equipment, for char select (TODO: use the service instead)
             db.query('select template from ib_items where owner=? and equipped=1', [outChar.id], function(err, results) {
                 if(err) {
                     log('error getting equipment for character: ' + outChar.id);

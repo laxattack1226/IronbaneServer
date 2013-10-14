@@ -86,20 +86,16 @@ var Player = Fighter.extend({
     this._super(victim, weapon);
 
   },
-  Delete: function() {
+    Delete: function() {
+        // Remove the character from the DB
+        // We don't need to delete the unit, since the player can't really do
+        // anything anymore and will have to leave sooner or later
+        mysql.query('DELETE FROM ib_characters WHERE id = ?', [this.id]);
 
-
-    // Remove the character from the DB
-    // We don't need to delete the unit, since the player can't really do
-    // anything anymore and will have to leave sooner or later
-    mysql.query('DELETE FROM ib_characters WHERE id = ?', [this.id]);
-
-    this.items = [];
-
-    // Delete the items
-    mysql.query('DELETE FROM ib_items WHERE owner = ?', [this.id]);
-
-  },
+        this.items = [];
+        // Delete the items
+        Item.deleteAllForOwner(this.id);
+    },
   BigMessage: function(message) {
     this.socket.emit("bigMessage", {
       message: message
@@ -192,27 +188,12 @@ var Player = Fighter.extend({
             this.id
         ]);
 
-        // Save the items
-        (function(unit) {
-            mysql.query('DELETE FROM ib_items WHERE owner = ?', [unit.id], function(err, results, fields) {
-                for (var i = 0; i < unit.items.length; i++) {
-                    var item = unit.items[i];
-
-                    // 20/9/12: Removed  server.GetAValidItemID() for id field as it causes duplication errors
-                    // Normally it doesn't matter which ID the items gets
-                    mysql.query('INSERT INTO ib_items (template, attr1, owner, equipped, slot, value, data) ' +
-                        'VALUES(?,?,?,?,?,?,?)', [
-                        item.template,
-                        item.attr1,
-                        unit.id,
-                        item.equipped,
-                        item.slot,
-                        item.value || 0,
-                        JSON.stringify(item.data)
-                    ]);
-                }
+        Item.deleteAllForOwner(unit.id).then(function() {
+            _.each(unit.items, function(item) {
+                // should already be set with owner === unit.id?
+                item.$save();
             });
-        })(this);
+        });
     },
   LeaveGame: function() {
 
