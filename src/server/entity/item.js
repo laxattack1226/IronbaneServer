@@ -16,10 +16,11 @@
 */
 
 // requires ItemTemplate service because all Item instances must be based off a template
-module.exports = function(db, ItemTemplate) {
+module.exports = function(db) {
     var _ = require('underscore'),
         q = require('q'),
-        Class = require('../../common/class');
+        Class = require('../../common/class'),
+        ItemTemplate = require('./itemTemplate');
 
     var updateSchema = ['template', 'attr1', 'owner', 'equipped', 'slot', 'value', 'data'];
 
