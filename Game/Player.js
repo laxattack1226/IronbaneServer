@@ -169,6 +169,8 @@ var Player = Fighter.extend({
     }, 1000);
   },
     Save: function() {
+        var unit = this;
+
         // No updating for guests
         // Update MYSQL and set the character data
         mysql.query('UPDATE ib_characters SET ' +
@@ -180,12 +182,12 @@ var Player = Fighter.extend({
             'roty = ?' +
             ' WHERE id = ?', [
             Math.round(new Date().getTime() / 1000),
-            this.position.x,
-            this.position.y,
-            this.position.z,
-            this.zone,
-            this.rotation.y,
-            this.id
+            unit.position.x,
+            unit.position.y,
+            unit.position.z,
+            unit.zone,
+            unit.rotation.y,
+            unit.id
         ]);
 
         Item.deleteAllForOwner(unit.id).then(function() {

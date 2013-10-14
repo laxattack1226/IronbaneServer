@@ -134,9 +134,14 @@ module.exports = function(db, ItemTemplate) {
                 return deferred.reject('error loading item data' + err);
             }
 
-            ItemTemplate.get(results[0].template).then(function(template) {
-                deferred.resolve(new Item(template, results[0]));
+            var items = [];
+            _.each(results, function(data) {
+                ItemTemplate.get(data.template).then(function(template) {
+                    items.push(new Item(template, data));
+                });
             });
+
+            deferred.resolve(items);
         });
 
         return deferred.promise;

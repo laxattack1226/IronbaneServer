@@ -28,7 +28,7 @@ var SocketHandler = Class.extend({
         // temp until service implemented
         function loadCharItems(chardata, callback) {
             chardata.items = [];
-            Item.getAllByOwner(chardata.id).then(function(items) {
+            Item.getAllForOwner(chardata.id).then(function(items) {
                 chardata.items = items;
                 callback();
             }, function(err) {
