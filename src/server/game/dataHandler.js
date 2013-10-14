@@ -17,22 +17,18 @@
 
 var _ = require('underscore');
 
-module.exports = function(db) {
+module.exports = function(db, ItemTemplate) {
     var future = {
         items: {},
         units: {}
     };
 
-    db.query('SELECT * FROM ib_item_templates',
-        function(err, results, fields) {
-            if (err) {
-                throw err;
-            }
-
-            _.each(results, function(item) {
-                future.items[item.id] = item;
-            });
+    // this instance will pull from cache if exists (eventually dataHandler will go away and just access the service directly)
+    ItemTemplate.getAll().then(function(templates) {
+        _.each(templates, function(template) {
+            future.items[template.id] = template;
         });
+    });
 
     db.query('SELECT * FROM ib_unit_templates',
         function(err, results, fields) {

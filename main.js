@@ -93,7 +93,6 @@ module.exports = function() {
         './Engine/WorldHandler.js',
         './Game/AI/graph.js',
         './Game/AI/astar.js',
-        './Game/item.js',
         './Game/SteeringBehaviour.js',
         './Game/Unit.js',
         './Game/MovingUnit.js',
@@ -167,8 +166,12 @@ module.exports = function() {
         // inject into global until rest is modular
         _.extend(global, IB);
 
+        // load shared server entity services (todo: wrap under namespace)
+        global.ItemTemplate = require('./src/server/entity/itemTemplate')(mysql);
+        global.Item = require('./src/server/entity/item')(mysql, ItemTemplate);
+
         // Load DataHandler global for now (holds memory DB of item and unit templates)
-        global.dataHandler = require('./src/server/game/dataHandler')(mysql);
+        global.dataHandler = require('./src/server/game/dataHandler')(mysql, ItemTemplate);
 
         // load AI as a module
         var AI = require('./src/server/game/ai');

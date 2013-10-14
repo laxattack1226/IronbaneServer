@@ -19,7 +19,14 @@ var Class = require('../../common/class');
 module.exports = function(db) {
     var Q = require('q'),
         _ = require('underscore'),
+        TinyCache = require('tinycache'),
         log = require('util').log;
+
+    // valid fields to update in DB
+    var updateSchema = ['name', 'image', 'type', 'subtype', 'attr1', 'delay', 'particle', 'basevalue'];
+
+    // in memory cache
+    var cache = new TinyCache();
 
     var ItemTemplate = Class.extend({
         init: function(json) {
@@ -27,24 +34,65 @@ module.exports = function(db) {
 
             // convert baseValue to camelcase from DB
             this.baseValue = this.basevalue;
+        },
+        $save: function() {
+            var deferred = Q.defer(),
+                self = this;
+
+            var persist = _.pick(self, updateSchema);
+
+            if(self.id) {
+                // update
+                db.query('update ib_item_templates set ? where id=' + self.id, persist, function(err, result) {
+                    if(err) {
+                        return deferred.reject(err);
+                    }
+
+                    cache.put(self.id, self);
+                    deferred.resolve(self);
+                });
+            } else {
+                // insert
+                db.query('insert into ib_item_templates set ?', persist, function(err, result) {
+                    if(err) {
+                        return deferred.reject(err);
+                    }
+
+                    self.id = result.insertId;
+                    cache.put(self.id, self);
+                    deferred.resolve(self);
+                });
+            }
+
+            return deferred.promise;
         }
     });
 
+    // will get cached, todo: param to force no cache?
     ItemTemplate.getAll = function() {
         var deferred = Q.defer();
-        log("getting templates");
-        db.query('select * from ib_item_templates', [], function(err, results) {
-            if (err) {
-                deferred.reject('error loading item template data' + err);
-                return;
-            }
-            var templates = [];
-            _.each(results, function(row) {
-                templates.push(new ItemTemplate(row));
-            });
 
+        // check cache
+        if(_.keys(cache.cache).length === 0) {
+            //log("getting templates");
+            db.query('select * from ib_item_templates', [], function(err, results) {
+                if (err) {
+                    deferred.reject('error loading item template data' + err);
+                    return;
+                }
+                var templates = [];
+                _.each(results, function(row) {
+                    templates.push(new ItemTemplate(row));
+                });
+
+                deferred.resolve(templates);
+            });
+        } else {
+            var templates = _.map(_.keys(cache.cache), function(key) {
+                return cache.get(key);
+            });
             deferred.resolve(templates);
-        });
+        }
 
         return deferred.promise;
     };
@@ -52,21 +100,28 @@ module.exports = function(db) {
 
     ItemTemplate.get = function(templateId) {
         var deferred = Q.defer();
-        log("getting template " + templateId);
-        db.query('select * from ib_item_templates where id = ?', [templateId], function(err, results) {
-            if (err) {
-                deferred.reject('error loading item template data' + err);
-                return;
-            }
 
-            log(JSON.stringify(results));
+        if(cache.get(templateId) !== null) {
+            deferred.resolve(cache.get(templateId));
+        } else {
+            //log("getting template " + templateId);
+            db.query('select * from ib_item_templates where id = ?', [templateId], function(err, results) {
+                if (err) {
+                    deferred.reject('error loading item template data' + err);
+                    return;
+                }
 
-            deferred.resolve(new ItemTemplate(results[0]));
-        });
+                var template = new ItemTemplate(results[0]);
+
+                // cache result
+                cache.put(templateId, template);
+
+                deferred.resolve(template);
+            });
+        }
 
         return deferred.promise;
     };
-
 
     return ItemTemplate;
 };
