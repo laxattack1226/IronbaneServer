@@ -384,6 +384,7 @@ var SocketHandler = Class.extend({
                 }
 
                 if (!CheckData(data, ["s", "t", "w", "o", "sw"])) {
+                    console.log('BAD PROJECTILE DATA?: ', data);
                     reply({
                         errmsg: "Corrupt projectile data"
                     });

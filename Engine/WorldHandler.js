@@ -263,76 +263,70 @@ var WorldHandler = Class.extend({
     if ( !_.isUndefined(cx) && _.isUndefined(worldHandler.world[zone][cx]) ) worldHandler.world[zone][cx] = {};
     if ( !_.isUndefined(cz) && _.isUndefined(worldHandler.world[zone][cx][cz]) ) worldHandler.world[zone][cx][cz] = {};
   },
-  LoadWorldLight: function() {
+    LoadWorldLight: function() {
+        var self = this,
+            cellsLoaded = {},
+            unitsToLoad = [];
 
-    var cellsLoaded = {};
+        self.world = {};
 
-    this.world = {};
-
-    util.walk(dataPath, function(err, results) {
-      if (err) throw err;
-    var rl = results.length;
-      for (var r=0;r<rl;r++) {
-        results[r] = results[r].replace(dataPath+"/", "");
-
-        var data = results[r].split("/");
-
-        //log(data);
-
-        var zone = parseInt(data[0], 10);
-        var cx = parseInt(data[1], 10);
-        var cz = parseInt(data[2], 10);
-
-        var file = data[3];
-        if ( !_.isNumber(zone) ) continue;
-        if ( !_.isNumber(cx) ) continue;
-        if ( !_.isNumber(cz) ) continue;
-
-
-        worldHandler.BuildWorldStructure(zone, cx, cz);
-
-        // Load navigation graph, even in a light world because we need it
-        if ( file == "graph.json" ) {
-          try {
-            var path = dataPath+"/"+zone+"/"+cx+"/"+cz;
-            var stats = fs.lstatSync(path+"/graph.json");
-
-            if (stats.isFile()) {
-              worldHandler.world[zone][cx][cz].graph = JSON.parse(fs.readFileSync(path+"/graph.json", 'utf8'));
+        util.walk(dataPath, function(err, results) {
+            if (err) {
+              throw err;
             }
-          }
-          catch (e) {
-            throw e;
-          }
-        }
 
+            for (var r = 0, rl = results.length; r < rl; r++) {
+                results[r] = results[r].replace(dataPath + "/", "");
+                var data = results[r].split("/"),
+                    zone = parseInt(data[0], 10),
+                    cx = parseInt(data[1], 10),
+                    cz = parseInt(data[2], 10),
+                    file = data[3];
 
-        if ( file !== "objects.json" ) continue;
+                if (!_.isNumber(zone) || !_.isNumber(cx) || !_.isNumber(cz)) {
+                  continue;
+                }
 
-        worldHandler.world[zone][cx][cz].objects = [];
-        worldHandler.world[zone][cx][cz].units = [];
-        worldHandler.world[zone][cx][cz].hasLoadedUnits = false;
+                worldHandler.BuildWorldStructure(zone, cx, cz);
 
-        //log("Loaded cell ("+cx+","+cz+") in zone "+zone);
-        if ( !cellsLoaded[zone] ) cellsLoaded[zone] = 0;
-        cellsLoaded[zone]++;
+                // Load navigation graph, even in a light world because we need it
+                if ( file === "graph.json" ) {
+                    try {
+                        var path = dataPath + "/" + zone + "/" + cx + "/" + cz;
+                        var stats = fs.lstatSync(path + "/graph.json");
 
-        worldHandler.LoadUnits(zone, cx, cz);
-      }
+                        if (stats.isFile()) {
+                            worldHandler.world[zone][cx][cz].graph = JSON.parse(fs.readFileSync(path + "/graph.json", 'utf8'));
+                        }
+                    }
+                    catch (e) {
+                        throw e;
+                    }
 
-      _.each(cellsLoaded, function(z, v) {
-        log("Loaded "+z+" cells in zone "+v);
-      });
+                    worldHandler.world[zone][cx][cz].objects = [];
+                    worldHandler.world[zone][cx][cz].units = [];
+                    worldHandler.world[zone][cx][cz].hasLoadedUnits = false;
 
+                    if (!cellsLoaded[zone]) {
+                        cellsLoaded[zone] = 0;
+                    }
+                    cellsLoaded[zone]++;
 
+                    _.each(cellsLoaded, function(z, v) {
+                        log("Loaded " + z + " cells in zone " + v);
+                    });
 
-      worldHandler.hasLoadedWorld = true;
+                    unitsToLoad.push(worldHandler.LoadUnits(zone, cx, cz)); // generate array of promises
+                } else {
+                    continue;
+                }
+            }
 
-    });
-
-
-
-  },
+            Q.all(unitsToLoad).then(function() {
+                self.hasLoadedWorld = true;
+            });
+        });
+    },
   LoopUnits: function(fn) {
     this.LoopCells(function(cell) {
       if ( !_.isUndefined(cell.units) ) {
