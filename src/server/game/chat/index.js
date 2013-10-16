@@ -15,7 +15,7 @@
     along with Ironbane MMO.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-module.exports = function(io, items, units, worldHandler) {
-    var ChatHandler = require('./chatHandler')(items, units, worldHandler);
+module.exports = function(io, worldHandler) {
+    var ChatHandler = require('./chatHandler')(worldHandler);
     return new ChatHandler(io);
 };
