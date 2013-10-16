@@ -436,9 +436,12 @@ var Fighter = Actor.extend({
         return true;
     },
     addCoins: function(amount) {
+        var deferred = Q.defer();
+
         // attempt to auto stack coins
         if(amount <= 0) {
-            return false;
+            deferred.reject('negative amount not allowed!');
+            return deferred.promise;
         }
 
         var bags = _.where(this.items, {type: 'cash'});
@@ -446,21 +449,24 @@ var Fighter = Actor.extend({
             // for now just add to the first bag,
             // todo: bag limits?
             bags[0].value += amount;
+            deferred.resolve();
         } else {
             // need to add one if the slot is available
-            var template = _.where(dataHandler.items, {type: 'cash'})[0];
-            if(!template) {
-                log('server has no cash items!!!');
-                return false;
-            }
+            ItemTemplate.getAllByType('cash').then(function(templates) {
+                if(templates.length === 0) {
+                    log('server has no cash items!!!');
+                    return deferred.reject();
+                }
 
-            if(!this.GiveItem(template, {value: amount})) {
-                // no room in inventory for coins!
-                return false;
-            }
+                if(!this.GiveItem(template, {value: amount})) {
+                    deferred.reject();
+                } else {
+                    deferred.resolve();
+                }
+            });
         }
 
-        return true;
+        return deferred.promise;
     },
     UpdateAppearance: function(sendChanges) {
         this.head = 0;

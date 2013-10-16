@@ -66,28 +66,32 @@ var NPC = Fighter.extend({
 
     },
     SetWeaponsAndLoot: function() {
-        this.weapons = [];
-        this.loot = [];
-        this.weapon = null;
+        var self = this;
+
+        self.weapons = [];
+        self.loot = [];
+        self.weapon = null;
 
         // Store the weapons and loot
-        if (!_.isEmpty(this.template.weapons)) {
-            var weaponSplit = this.template.weapons.split(",");
+        var wPromises = [];
+        if (!_.isEmpty(self.template.weapons)) {
+            var weaponSplit = self.template.weapons.split(",");
             for (var w = 0; w < weaponSplit.length; w++) {
-                this.weapons.push(dataHandler.items[parseInt(weaponSplit[w], 10)]);
-            }
-
-            if (this.weapons.length > 0) {
-                this.weapon = this.weapons[0];
+                wPromises.push(ItemTemplate.get(parseInt(weaponSplit[w], 10)).then(function(template) {
+                    self.weapons.push(template);
+                    if(self.weapons.length >= 1) {
+                        self.weapon = self.weapons[0];
+                    }
+                }));
             }
         }
 
         var theLoot = "";
         // if we have JSON loot use that otherwise fall back to template
-        if (this.data && !_.isEmpty(this.data.loot)) {
-            theLoot = this.data.loot;
-        } else if (!_.isEmpty(this.template.loot)) {
-            theLoot = this.template.loot;
+        if (self.data && !_.isEmpty(self.data.loot)) {
+            theLoot = self.data.loot;
+        } else if (!_.isEmpty(self.template.loot)) {
+            theLoot = self.template.loot;
         }
 
         if (!_.isEmpty(theLoot)) {
@@ -96,7 +100,7 @@ var NPC = Fighter.extend({
                 var item = null;
 
                 // No percentages for vendors!
-                if (this.template.type === UnitTypeEnum.VENDOR) {
+                if (self.template.type === UnitTypeEnum.VENDOR) {
                     item = parseInt(lootSplit[l], 10);
                 } else {
                     var chanceSplit = lootSplit[l].split(":");
@@ -107,31 +111,22 @@ var NPC = Fighter.extend({
                 }
 
                 if (item) {
-
-                    if (_.isUndefined(dataHandler.items[item])) {
-                        log("Warning! item " + item + " not found for NPC " + this.id + "!");
-                        continue;
-                    }
-
-                    var itemTemplate = dataHandler.items[item];
-                    var temp = new Item(itemTemplate, {
-                        slot: l
+                    ItemTemplate.get(item).then(function(template) {
+                        if(!template) {
+                            log("Warning! item " + item + " not found for NPC " + self.id + "!");
+                        } else {
+                            var temp = new Item(template, {slot: 1});
+                            if(self.template.type === UnitTypeEnum.VENDOR) {
+                                // set price & owner
+                                temp.price = temp.value;
+                                temp.owner = self.id;
+                            }
+                            self.loot.push(temp);
+                        }
                     });
-
-                    if (this.template.type === UnitTypeEnum.VENDOR) {
-                        // Specifiy a price
-                        temp.price = temp.value;
-
-                        // And an owner
-                        temp.owner = this.id;
-                    }
-
-                    this.loot.push(temp);
                 }
             }
         }
-
-        //console.log('**** LOOT SET FOR: ', this.id, this.loot);
     },
     Jump: function() {
         this.EmitNearby("doJump", {
