@@ -102,15 +102,6 @@ var Fighter = Actor.extend({
 
     this.lastBattleActionTimer = battleStatusTimeout;
 
-
-
-
-    // Do damage
-    //        if ( this.id > 0 ) {
-    //            var template = dataHandler.items[weapon.template];
-    //
-    //        }
-
     var damage = this.ch999Damage ? 999 : weapon.attr1;
 
     if ( !victim.chGodMode ) {
@@ -283,8 +274,8 @@ var Fighter = Actor.extend({
                     z: this.position.z + Math.sin(angle),
                     zone: this.zone,
 
-                    // Hacky: refers to lootBag ID
-                    template: dataHandler.units[lootBagTemplate],
+                    // Hacky: refers to lootBag template in memory
+                    template: lootBagTemplate,
 
                     roty: 0
                 }, false);
@@ -383,45 +374,42 @@ var Fighter = Actor.extend({
       this.SetHealth(this.healthMax);
     }
   },
-  // Returns true when the max armor changed
-  CalculateMaxArmor: function(doEmit) {
+    // Returns true when the max armor changed
+    CalculateMaxArmor: function(doEmit) {
+        doEmit = doEmit || false;
 
+        var self = this,
+            oldArmorMax = self.armorMax,
+            armorMax = 0,
+            checks = [];
 
-    doEmit = doEmit || false;
-
-    var oldArmorMax = this.armorMax;
-
-    var armorMax = 0;
-
-    for(var i=0;i<this.items.length;i++) {
-      var item = this.items[i];
-
-      var template = dataHandler.items[item.template];
-
-      if ( item.equipped ) {
-
-        if ( template.type == "armor" ) {
-
-          armorMax += item.attr1;
-
+        if(self.items.length === 0) {
+            return;
         }
-      }
-    }
 
-    this.armorMax = armorMax;
+        _.each(self.items, function(item) {
+            checks.push(ItemTemplate.get(item.template).then(function(template) {
+                if(template.type === 'armor' && item.equipped) {
+                    armorMax += item.attr1;
+                }
+            }));
+        });
 
-    if ( doEmit && this.armorMax != oldArmorMax ) {
-      this.EmitNearby("setStat", {
-        id:this.id,
-        s:"am",
-        am:this.armorMax
-        }, 0, true);
-    }
+        Q.all(checks).then(function() {
+            self.armorMax = armorMax;
+            if(doEmit && self.armorMax !== oldArmorMax) {
+                self.EmitNearby('setStat', {
+                    id: self.id,
+                    s: 'am',
+                    am: self.armorMax
+                }, 0, true);
+            }
 
-    if ( this.armor > this.armorMax ) {
-      this.SetArmor(this.armorMax);
-    }
-  },
+            if(self.armor > self.armorMax) {
+                self.SetArmor(self.armorMax);
+            }
+        });
+    },
     GiveItem: function(template, config) {
         // todo: variable max inv?
         if (this.items.length >= 10) {

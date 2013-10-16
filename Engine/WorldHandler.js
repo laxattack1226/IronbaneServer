@@ -19,6 +19,111 @@
 var dataPath = clientDir + 'data';
 var dataPathPersistent = assetDir + 'data';
 
+// todo: move to separate location or integrate into another Unit service?
+var UnitFactory = function() {};
+UnitFactory.create = function(data) {
+    var unit,
+        deferred = Q.defer();
+
+    switch (data.template.type) {
+        case UnitTypeEnum.NPC:
+        case UnitTypeEnum.MONSTER:
+        case UnitTypeEnum.VENDOR:
+        case UnitTypeEnum.TURRET:
+        case UnitTypeEnum.TURRET_STRAIGHT:
+        case UnitTypeEnum.TURRET_KILLABLE:
+        case UnitTypeEnum.WANDERER:
+            unit = new NPC(data);
+            break;
+
+        case UnitTypeEnum.MOVINGOBSTACLE:
+            if (data.data) {
+                // Convert data rotations to regular members
+                data.rotx = data.data.rotX;
+                data.roty = data.data.rotY;
+                data.rotz = data.data.rotZ;
+            }
+            unit = new MovingObstacle(data);
+            break;
+
+        case UnitTypeEnum.TOGGLEABLEOBSTACLE:
+            if (data.data) {
+                // Convert data rotations to regular members
+                data.rotx = data.data.rotX;
+                data.roty = data.data.rotY;
+                data.rotz = data.data.rotZ;
+            }
+            unit = new ToggleableObstacle(data);
+            break;
+
+        case UnitTypeEnum.TRAIN:
+            if (data.data) {
+                // Convert data rotations to regular members
+                data.rotx = data.data.rotX;
+                data.roty = data.data.rotY;
+                data.rotz = data.data.rotZ;
+            } else if (!data || !data.scriptName) {
+                // Can't live without a script!
+                return deferred.reject("Warning: no script found for Train " + data.id);
+            }
+            unit = new Train(data);
+            break;
+
+        case UnitTypeEnum.LEVER:
+            unit = new Lever(data);
+            break;
+
+        case UnitTypeEnum.TELEPORTENTRANCE:
+            unit = new TeleportEntrance(data);
+            break;
+
+        case UnitTypeEnum.TELEPORTEXIT:
+            unit = new TeleportExit(data);
+            break;
+
+        case UnitTypeEnum.MUSICPLAYER:
+            unit = new MusicPlayer(data);
+            break;
+
+        case UnitTypeEnum.SIGN:
+            if (data.data) {
+                // Convert data rotations to regular members
+                data.rotx = data.data.rotX;
+                data.roty = data.data.rotY;
+                data.rotz = data.data.rotZ;
+            }
+
+            unit = new Sign(data);
+            break;
+
+        case UnitTypeEnum.WAYPOINT:
+            unit = new Waypoint(data);
+            break;
+
+        case UnitTypeEnum.LOOTABLE:
+            if (data.data) {
+                // Convert data rotations to regular members
+                data.rotx = data.data.rotX;
+                data.roty = data.data.rotY;
+                data.rotz = data.data.rotZ;
+            }
+            unit = new Lootable(data, true);
+            break;
+
+        case UnitTypeEnum.HEARTPIECE:
+            unit = new HeartPiece(data);
+            break;
+
+        default:
+            unit = new Unit(data);
+            break;
+    }
+
+    deferred.resolve(unit);
+
+    return deferred.promise;
+};
+
 
 var WorldHandler = Class.extend({
   Init: function() {
@@ -299,174 +404,75 @@ var WorldHandler = Class.extend({
 
 
   },
-  LoadUnits: function(zone, cellX, cellZ) {
+    LoadUnits: function(zone, cellX, cellZ) {
+        var self = this,
+            deferred = Q.defer(),
+            worldPos = CellToWorldCoordinates(cellX, cellZ, cellSize);
 
+        mysql.query('SELECT * FROM ib_units WHERE zone = ? AND x > ? AND z > ? AND x < ? AND z < ?',
+            [zone, (worldPos.x - cellSizeHalf), (worldPos.z - cellSizeHalf), (worldPos.x + cellSizeHalf), (worldPos.z + cellSizeHalf)],
+            function (err, results) {
+                if(err) {
+                    return deferred.reject(err);
+                }
 
-    var worldPos = CellToWorldCoordinates(cellX, cellZ, cellSize);
+                if(results.length === 0) {
+                    self.world[zone][cellX][cellZ].hasLoadedUnits = true;
+                    return deferred.resolve('no units found to load.');
+                }
 
+                var promises = [];
+                _.each(results, function(unitdata) {
+                    promises.push(self.MakeUnitFromData(unitdata));
+                });
 
+                Q.all(promises).then(function() {
+                    self.world[zone][cellX][cellZ].hasLoadedUnits = true;
+                    deferred.resolve();
+                });
+            });
 
+        return deferred.promise;
+    },
+    MakeUnitFromData: function(data) {
+        var deferred = Q.defer();
 
+        data.id = -data.id;
 
+        if ( typeof data.data === "string" ) {
+            data.data = JSON.parse(data.data);
+        }
 
-    (function(zone,cellX,cellZ){
-      mysql.query('SELECT * FROM ib_units WHERE zone = ? AND x > ? AND z > ? AND x < ? AND z < ?',
-        [zone,(worldPos.x-cellSizeHalf),(worldPos.z-cellSizeHalf),(worldPos.x+cellSizeHalf),(worldPos.z+cellSizeHalf)],
-        function (err, results, fields) {
+        UnitTemplate.get(data.template).then(function(template) {
+            data.template = template;
+            // Depending on the param, load different classes
+            // Set the appearance on the NPC so we can customize it later
+            data.skin = data.template.skin;
+            data.eyes = data.template.eyes;
+            data.hair = data.template.hair;
+            data.head = data.template.head;
+            data.body = data.template.body;
+            data.feet = data.template.feet;
+            data.displayweapon = data.template.displayweapon;
 
-          if (err) throw err;
+            UnitFactory.create(data).then(function(unit) {
+                deferred.resolve(unit);
+            });
+        }, function(err) {
+            log("Warning! Unit template " + data.template + " not found!");
+            log("Cleaning up MySQL...");
 
-          for(var u=0;u<results.length;u++) {
+            mysql.query('DELETE FROM ib_units WHERE template = ?', [data.template], function(err) {
+              if (err) {
+                  throw err;
+              }
 
-
-            var unitdata = results[u];
-
-
-            worldHandler.MakeUnitFromData(unitdata);
-
-
-          }
-
-          worldHandler.world[zone][cellX][cellZ].hasLoadedUnits = true;
-
+              deferred.reject('unit template not found.');
+            });
         });
-    })(zone, cellX, cellZ);
 
-
-
-
-  },
-  MakeUnitFromData: function(data) {
-    data.id = -data.id;
-
-
-
-    if ( typeof data.data === "string" ) {
-      data.data = JSON.parse(data.data);
-    }
-
-    if ( _.isUndefined(dataHandler.units[data.template]) ) {
-      log("Warning! Unit template "+data.template+" not found!");
-      log("Cleaning up MySQL...");
-
-      mysql.query('DELETE FROM ib_units WHERE template = ?', [data.template], function (err) {
-        if (err) throw err;
-      });
-
-      return null;
-    }
-
-    data.template = dataHandler.units[data.template];
-    // Depending on the param, load different classes
-
-    // Set the appearance on the NPC so we can customize it later
-    data.skin = data.template.skin;
-    data.eyes = data.template.eyes;
-    data.hair = data.template.hair;
-    data.head = data.template.head;
-    data.body = data.template.body;
-    data.feet = data.template.feet;
-
-    data.displayweapon = data.template.displayweapon;
-
-
-    var unit = null;
-
-    switch(data.template.type) {
-      case UnitTypeEnum.NPC:
-      case UnitTypeEnum.MONSTER:
-      case UnitTypeEnum.VENDOR:
-      case UnitTypeEnum.TURRET:
-      case UnitTypeEnum.TURRET_STRAIGHT:
-      case UnitTypeEnum.TURRET_KILLABLE:
-      case UnitTypeEnum.WANDERER:
-        unit = new NPC(data);
-        break;
-      case UnitTypeEnum.MOVINGOBSTACLE:
-
-        if ( data.data ) {
-          // Convert data rotations to regular members
-          data.rotx = data.data.rotX;
-          data.roty = data.data.rotY;
-          data.rotz = data.data.rotZ;
-        }
-
-        unit = new MovingObstacle(data);
-        break;
-      case UnitTypeEnum.TOGGLEABLEOBSTACLE:
-
-        if ( data.data ) {
-          // Convert data rotations to regular members
-          data.rotx = data.data.rotX;
-          data.roty = data.data.rotY;
-          data.rotz = data.data.rotZ;
-        }
-
-        unit = new ToggleableObstacle(data);
-        break;
-      case UnitTypeEnum.TRAIN:
-
-        if ( data.data ) {
-          // Convert data rotations to regular members
-          data.rotx = data.data.rotX;
-          data.roty = data.data.rotY;
-          data.rotz = data.data.rotZ;
-        }
-        else if ( !data || !data.scriptName ) {
-          // Can't live without a script!
-          log("Warning: no script found for Train "+data.id);
-          return;
-        }
-
-        unit = new Train(data);
-        break;
-      case UnitTypeEnum.LEVER:
-        unit = new Lever(data);
-        break;
-      case UnitTypeEnum.TELEPORTENTRANCE:
-        unit = new TeleportEntrance(data);
-        break;
-      case UnitTypeEnum.TELEPORTEXIT:
-        unit = new TeleportExit(data);
-        break;
-      case UnitTypeEnum.MUSICPLAYER:
-        unit = new MusicPlayer(data);
-        break;
-      case UnitTypeEnum.SIGN:
-
-        if ( data.data ) {
-          // Convert data rotations to regular members
-          data.rotx = data.data.rotX;
-          data.roty = data.data.rotY;
-          data.rotz = data.data.rotZ;
-        }
-
-        unit = new Sign(data);
-        break;
-      case UnitTypeEnum.WAYPOINT:
-        unit = new Waypoint(data);
-        break;
-      case UnitTypeEnum.LOOTABLE:
-
-        if ( data.data ) {
-          // Convert data rotations to regular members
-          data.rotx = data.data.rotX;
-          data.roty = data.data.rotY;
-          data.rotz = data.data.rotZ;
-        }
-
-        unit = new Lootable(data, true);
-        break;
-      case UnitTypeEnum.HEARTPIECE:
-        unit = new HeartPiece(data);
-        break;
-      default:
-        unit = new Unit(data);
-        break;
-    }
-
-    return unit;
-  },
+        return deferred.promise;
+    },
   LoadCell: function(zone, cellX, cellZ) {
     // Query the entry
     var path = (persistentWorldChanges ? dataPathPersistent : dataPath)+"/"+zone+"/"+cellX+"/"+cellZ;

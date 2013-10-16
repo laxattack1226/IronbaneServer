@@ -44,8 +44,8 @@ module.exports = function(app, db) {
     var getGameModel = function() {
         var tasks = [],
             Zone = require('../../entity/zone')(db),
-            UnitTemplate = require('../../entity/unitTemplate')(db),
-            ItemTemplate = require('../../entity/itemTemplate')(db),
+            UnitTemplate = require('../../entity/unitTemplate'),
+            ItemTemplate = require('../../entity/itemTemplate'),
             Mesh = require('../../entity/mesh')(db);
 
         tasks.push(Zone.getAll().then(function(zones) {
@@ -61,11 +61,12 @@ module.exports = function(app, db) {
             return zones;
         }, function(err) { return Q.reject(err); }));
 
-        tasks.push(UnitTemplate.get({$fields: ['id', 'name', 'type', 'health', 'armor', 'param', 'size', 'special', 'weaponoffsetmultiplier', 'friendly']}).then(function(templates) {
-            _.each(templates, function(t) {
-                gameModel.units[t.id] = t;
-                gameModel.unitTemplates[t.name] = t.id;
-            });
+        tasks.push(UnitTemplate.get({$fields: ['id', 'name', 'type', 'health', 'armor', 'param', 'size', 'special', 'weaponoffsetmultiplier', 'friendly']})
+            .then(function(templates) {
+                _.each(templates, function(t) {
+                    gameModel.units[t.id] = t;
+                    gameModel.unitTemplates[t.name] = t.id;
+                });
 
             return templates;
         }, function(err) { return Q.reject(err); }));

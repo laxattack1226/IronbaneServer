@@ -605,10 +605,8 @@ var SocketHandler = Class.extend({
                     y: spawnPos.y,
                     z: spawnPos.z,
                     zone: player.zone,
-
-                    // Hacky: refers to lootBag ID
-                    template: dataHandler.units[lootBagTemplate],
-
+                    // Hacky: refers to lootBag template in memory
+                    template: lootBagTemplate,
                     roty: 0
                 }, false);
 
@@ -1097,96 +1095,88 @@ var SocketHandler = Class.extend({
                 }
             });
 
-
             socket.on("hit", function (data, reply) {
-
-                if ( !socket.unit ) return;
+                if (!socket.unit) {
+                    return;
+                }
 
                 if (!_.isFunction(reply)) {
                     log('hit no callback defined!');
                     return;
                 }
 
-
-                if ( !CheckData(data, ["l","w"]) ) {
+                if (!CheckData(data, ["l", "w"])) {
                     reply({
-                        errmsg:"Corrupt hit data"
+                        errmsg: "Corrupt hit data"
                     });
                     return;
                 }
 
-                if ( !data.l instanceof Array ) {
+                if (!data.l instanceof Array) {
                     reply({
-                        errmsg:"Corrupt data"
+                        errmsg: "Corrupt data"
                     });
                     return;
                 }
 
-                if ( !_.isNumber(data.w) ) {
+                if (!_.isNumber(data.w)) {
                     reply({
-                        errmsg:"Corrupt data"
+                        errmsg: "Corrupt data"
                     });
                     return;
                 }
 
-                var weapon = null;
-                for(var i=0;i<socket.unit.items.length;i++) {
-                    var item = socket.unit.items[i];
+                var weapon = _.find(socket.unit.items, function(item) {
+                    return item.id === data.w;
+                });
 
-                    if ( item.id == data.w ) {
-                        weapon = item;
-                    }
-                }
-
-                if ( !weapon ) {
+                if (!weapon) {
                     // reply({
                     //   errmsg:"No weapon found for hit!"
                     // });
                     return;
                 }
 
-                var template = dataHandler.items[weapon.template];
-
-                if ( template.type !== "weapon" ) {
-                    if ( !weapon ) {
-                        reply({
-                            errmsg:"Item is not a weapon!"
-                        });
-                        return;
-                    }
-                }
-
-                _.each(data.l, function(id) {
-
-
-                    if ( !_.isNumber(id) ) {
-                        reply({
-                            errmsg:"Corrupt data"
-                        });
-                        return;
+                ItemTemplate.get(weapon.template).then(function(template) {
+                    if (template.type !== "weapon") {
+                        if (!weapon) {
+                            reply({
+                                errmsg: "Item is not a weapon!"
+                            });
+                            return;
+                        }
                     }
 
-                    // Not ourselves!
-                    if ( id === socket.unit.id ) return;
+                    _.each(data.l, function(id) {
+                        if (!_.isNumber(id)) {
+                            reply({
+                                errmsg: "Corrupt data"
+                            });
+                            return;
+                        }
 
-                    var targetUnit = worldHandler.FindUnitNear(id, socket.unit);
+                        // Not ourselves!
+                        if (id === socket.unit.id) {
+                            return;
+                        }
 
-                    if ( !targetUnit ) {
-                        reply({
-                            errmsg:"No targetUnit found for hit!"
-                        });
-                        return;
-                    }
+                        var targetUnit = worldHandler.FindUnitNear(id, socket.unit);
 
-                    // Silent return...
-                    if ( targetUnit.health <= 0 ) {
-                        return;
-                    }
+                        if (!targetUnit) {
+                            reply({
+                                errmsg: "No targetUnit found for hit!"
+                            });
+                            return;
+                        }
 
-                    socket.unit.Attack(targetUnit, weapon);
+                        // Silent return...
+                        if (targetUnit.health <= 0) {
+                            return;
+                        }
 
+                        socket.unit.Attack(targetUnit, weapon);
+                    });
                 });
-
             });
 
             socket.on("ghit", function (data, reply) {
@@ -1292,13 +1282,15 @@ var SocketHandler = Class.extend({
             });
 
             socket.on("opReloadData", function (data) {
-                if ( !socket.unit || socket.unit.editor === false ) return;
+                // should no longer be necessary
+                return;
+                /*if ( !socket.unit || socket.unit.editor === false ) return;
 
                 dataHandler.Load();
 
                 setTimeout(function(){
                     chatHandler.announce("Reloaded NPC & Item templates", "white");
-                }, 1000);
+                }, 1000);*/
             });
 
             socket.on("pmManage", function (data) {
@@ -1435,64 +1427,66 @@ var SocketHandler = Class.extend({
             });
 
             socket.on("addNPC", function (data) {
-
                 // Later report them!
-                if ( !socket.unit || socket.unit.editor === false ) return;
+                if (!socket.unit || socket.unit.editor !== true) {
+                    return;
+                }
 
                 data.position = ConvertVector3(data.position);
                 data.position = data.position.Round(2);
 
                 var zone = socket.unit.zone;
-
                 var cellPos = WorldToCellCoordinates(data.position.x, data.position.z, cellSize);
 
+                if (_.isUndefined(worldHandler.world[zone])) {
+                    return;
+                }
 
-                if ( _.isUndefined(worldHandler.world[zone]) ) return;
-                if ( _.isUndefined(worldHandler.world[zone][cellPos.x]) ) return;
-                if ( _.isUndefined(worldHandler.world[zone][cellPos.x][cellPos.z]) ) return;
+                if (_.isUndefined(worldHandler.world[zone][cellPos.x])) {
+                    return;
+                }
 
+                if (_.isUndefined(worldHandler.world[zone][cellPos.x][cellPos.z])) {
+                    return;
+                }
 
                 data.x = data.position.x;
                 data.y = data.position.y;
                 data.z = data.position.z;
                 data.zone = zone;
 
-
-
-                if ( _.isUndefined(data.param) ) data.param = 0;
-
+                if (_.isUndefined(data.param)) {
+                    data.param = 0;
+                }
 
                 data.param = parseInt(data.param, 10);
-
 
                 if ( _.isUndefined(data.data) ) {
                     data.data = null;
                 }
 
-
                 data.id = -server.GetAValidNPCID();
 
-                mysql.query('INSERT INTO ib_units SET ?',
-                {
-                    id:data.id,
-                    zone:data.zone,
-                    x:data.x,
-                    y:data.y,
-                    z:data.z,
-                    template:data.template,
-                    roty:data.roty,
-                    param:data.param,
-                    data:JSON.stringify(data.data)
+                mysql.query('INSERT INTO ib_units SET ?', {
+                    id: data.id,
+                    zone: data.zone,
+                    x: data.x,
+                    y: data.y,
+                    z: data.z,
+                    template: data.template,
+                    roty: data.roty,
+                    param: data.param,
+                    data: JSON.stringify(data.data)
                 },
                 function (err, result) {
+                    if (err) {
+                        throw err;
+                    }
 
-                    if (err) throw err;
-
-                    var unit = worldHandler.MakeUnitFromData(data);
-                    if ( unit ) unit.Awake();
-
+                    worldHandler.MakeUnitFromData(data).then(function(unit) {
+                        unit.Awake();
+                    });
                 });
-
             });
 
             socket.on("moveNPC", function (data) {
