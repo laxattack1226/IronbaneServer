@@ -114,6 +114,31 @@ ItemTemplate.getAllByType = function(type) {
     return deferred.promise;
 };
 
+ItemTemplate.getByName = function(name) {
+    var deferred = Q.defer();
+
+    // check cache
+    if (_.keys(cache.cache).length === 0) {
+        ItemTemplate.getAll().then(function(templates) {
+            var result = _.findWhere(templates, {name: name});
+            if(result) {
+                deferred.resolve(result);
+            } else {
+                deferred.reject('not found!');
+            }
+        });
+    } else {
+        var template = _.findWhere(cache.cache, {name: name});
+        if(template) {
+            deferred.resolve(template);
+        } else {
+            deferred.reject('not found!');
+        }
+    }
+
+    return deferred.promise;
+};
+
 ItemTemplate.get = function(templateId) {
     var deferred = Q.defer();
 
