@@ -16,21 +16,18 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
+module.exports = function(worldHandler, chatHandler) {
+    var Q = require('q');
+
     return {
         requiresEditor: false,
-        action: function(unit, target, params, errorMessage) {
-
+        action: function(unit, target, params) {
             var message = "MOVE (W,A,S,D)<br>STRAFE (Q,E)<br>Walk slower, turn faster (shift)<br>Attack (right mouse click)<br>CHAT (enter)<br>If you get stuck (/stuck in chatbox)";
             chatHandler.announcePersonally(unit, message, "yellow");
 
-            return {
-                errorMessage: errorMessage
-            };
+            return Q.when('OK');
         }
     };
 };

@@ -16,18 +16,18 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
-    var _ = require('underscore');
+module.exports = function(worldHandler, chatHandler) {
+    var _ = require('underscore'),
+        Q = require('q');
 
     return {
         requiresEditor: false,
         name: 'rooms',
-        action: function(unit, target, params, errorMessage) {
-            var rooms = chatHandler.listRooms();
+        action: function(unit, target, params) {
+            var deferred = Q.defer(),
+                rooms = chatHandler.listRooms();
 
             // filter list of character names
             var players = chatHandler.listPlayers();
@@ -35,10 +35,9 @@ module.exports = function(items, units, worldHandler, chatHandler) {
 
             // todo: if not editor, filter out editor rooms?
             chatHandler.announcePersonally(unit, rooms.join(', '), '#97FFFF');
+            deferred.resolve();
 
-            return {
-                errorMessage: errorMessage
-            };
+            return deferred.promise;
         }
     };
 };

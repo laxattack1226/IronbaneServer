@@ -16,35 +16,34 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
-    var _ = require('underscore');
+module.exports = function(worldHandler, chatHandler) {
+    var _ = require('underscore'),
+        Q = require('q'),
+        ItemTemplate = require(APP_ROOT_PATH + '/src/server/entity/itemTemplate');
 
     return {
         requiresEditor: true,
-        action: function(unit, target, params, errorMessage) {
-            // find a "cash" item
-            var moneybag = _.where(items, {
-                    type: 'cash'
-                })[0],
+        action: function(unit, target, params) {
+            var deferred = Q.defer(),
                 amount = parseInt(params[0], 10);
 
-            if (moneybag) {
-                if (!unit.GiveItem(moneybag, {
-                    value: amount
-                })) {
-                    errorMessage = 'You have no free space!';
+            ItemTemplate.getAllByType('cash').then(function(templates) {
+                if(templates.length === 0) {
+                    return deferred.reject('No cash items found on server!');
                 }
-            } else {
-                errorMessage = 'no cash items found!';
-            }
 
-            return {
-                errorMessage: errorMessage
-            };
+                if(!this.GiveItem(template, {value: amount})) {
+                    deferred.reject('You have no free space!');
+                } else {
+                    deferred.resolve();
+                }
+            }, function(err) {
+                return deferred.reject('No cash items found on server!');
+            });
+
+            return deferred.promise;
         }
     };
 

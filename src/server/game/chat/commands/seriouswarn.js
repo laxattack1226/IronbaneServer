@@ -16,24 +16,26 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
+module.exports = function(worldHandler, chatHandler) {
+    var Q = require('q');
+
     return {
         requiresEditor: true,
-        action: function(unit, target, params, errorMessage) {
-            var name = params[0],
+        action: function(unit, target, params) {
+            var deferred = Q.defer(),
+                name = params[0],
                 player = worldHandler.FindPlayerByName(name);
 
             if (player) {
                 player.SeriousWarn();
+                deferred.resolve();
+            } else {
+                deferred.reject('Target player not found!');
             }
 
-            return {
-                errorMessage: errorMessage
-            };
+            return deferred.promise;
         }
     };
 };

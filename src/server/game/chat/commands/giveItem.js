@@ -16,40 +16,41 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
-    var _ = require('underscore');
+module.exports = function(worldHandler, chatHandler) {
+    var _ = require('underscore'),
+        Q = require('q'),
+        ItemTemplate = require(APP_ROOT_PATH + '/src/server/entity/itemTemplate');
 
     return {
         requiresEditor: true,
-        action: function(unit, target, params, errorMessage) {
-            // So, which item?
-            var template = -1;
+        action: function(unit, target, params) {
+            var deferred = Q.defer();
 
             // Try to convert to integer, if we passed an ID
             var testConvert = parseInt(params[0], 10);
             if (_.isNumber(testConvert) && !_.isNaN(testConvert)) {
-                template = items[testConvert];
+                ItemTemplate.get(testConvert).then(function(template) {
+                    if (!unit.GiveItem(template)) {
+                        return deferred.reject('You have no free space!');
+                    }
+                    deferred.resolve();
+                }, function(error) {
+                    deferred.reject('Item not found.');
+                });
             } else {
-                template = _.where(items, {
-                    name: params[0]
-                })[0];
+                ItemTemplate.getByName(params[0]).then(function(template) {
+                    if (!unit.GiveItem(template)) {
+                        return deferred.reject('You have no free space!');
+                    }
+                    deferred.resolve();
+                }, function(error) {
+                    deferred.reject('Item not found.');
+                });
             }
 
-            if (template) {
-                if (!unit.GiveItem(template)) {
-                    errorMessage = 'You have no free space!';
-                }
-            } else {
-                errorMessage = "Item not found!";
-            }
-
-            return {
-                errorMessage: errorMessage
-            };
+            return deferred.promise;
         }
     };
 

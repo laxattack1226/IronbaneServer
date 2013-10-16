@@ -22,7 +22,7 @@ module.exports = function(items, units, worldHandler) {
 
     var ChatHandler = Class.extend({
         init: function(io) {
-            this.commands = require('./commands')(items, units, worldHandler, this);
+            this.commands = require('./commands')(worldHandler, this);
             // needs reference to socket stuff for now
             this.io = io;
         },
@@ -83,26 +83,17 @@ module.exports = function(items, units, worldHandler) {
                 }
             }
 
-            var feedback = "(" + unit.name + ") " + message + "";
-            var errorMessage = "";
-            var showFeedback = true;
-
+            // input feedback should be echo'd from the UI, no need to send it back over the wire
             if (this.commands[command] && ((!this.commands[command].requiresEditor && !unit.editor) || unit.editor)) {
-                var result = this.commands[command].action(unit, target, realparams, errorMessage);
-                errorMessage = result.errorMessage;
+                this.commands[command].action(unit, target, realparams).then(function(result) {
+                    if(result && result.feedback) {
+                        self.announcePersonally(unit, result.feedback, '#01ff46');
+                    }
+                }, function(error) {
+                    self.announcePersonally(unit, error, '#FF0000');
+                });
             } else {
-                errorMessage = "That command does not exist!";
-            }
-
-            if (errorMessage && errorMessage.length > 0) {
-                feedback += "<br>" + errorMessage;
-            } else {
-                // let's only show feedback if there is an error
-                showFeedback = false;
-            }
-
-            if (showFeedback) {
-                this.announcePersonally(unit, feedback, errorMessage ? "red" : "#01ff46");
+                self.announcePersonally(unit, "That command does not exist!", '#FF0000');
             }
         },
         say: function(unit, message, room) {

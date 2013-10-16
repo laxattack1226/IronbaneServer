@@ -16,22 +16,19 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
-    var constants = require('../../../../common/constants');
+module.exports = function(worldHandler, chatHandler) {
+    var constants = require('../../../../common/constants'),
+        Q = require('q');
 
     return {
         requiresEditor: false,
-        action: function(unit, target, params, errorMessage) {
+        action: function(unit, target, params) {
             unit.Teleport(constants.normalSpawnZone, constants.normalSpawnPosition);
             chatHandler.announcePersonally(unit, "You were teleported back to town.", "lightgreen");
 
-            return {
-                errorMessage: errorMessage
-            };
+            return Q.when('OK');
         }
     };
 };

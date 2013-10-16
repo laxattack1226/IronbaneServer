@@ -16,16 +16,18 @@
 */
 
 // chat command API
-// items - item templates (from datahandler)
-// units - unit templates (from datahandler)
 // worldHandler - worldHandler reference
 // chatHandler - reference to general chat utils
-module.exports = function(items, units, worldHandler, chatHandler) {
+module.exports = function(worldHandler, chatHandler) {
+    var Q = require('q');
+
     return {
         requiresEditor: false,
-        action: function(unit, target, params, errorMessage) {
-            var room = params[0],
-                success = false;
+        action: function(unit, target, params) {
+            var deferred = Q.defer(),
+                room = params[0],
+                success = false,
+                errorMessage = '';
 
             // for now hard coded room rules
             if (unit.editor) {
@@ -48,11 +50,12 @@ module.exports = function(items, units, worldHandler, chatHandler) {
             // todo: instead provide feedback to return object?
             if(success) {
                 chatHandler.announcePersonally(unit, "Joined: " + room, "pink");
+                deferred.resolve();
+            } else {
+                deferred.reject(errorMessage);
             }
 
-            return {
-                errorMessage: errorMessage
-            };
+            return deferred.promise;
         }
     };
 };
