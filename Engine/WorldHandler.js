@@ -126,39 +126,28 @@ UnitFactory.create = function(data) {
 
 
 var WorldHandler = Class.extend({
-  Init: function() {
+    Init: function() {
+        // World structure
+        // [zone][cx][cz]
+        this.world = {};
+        this.allNodes = {};
+        this.switches = {};
+        this.awake = false;
+        this.hasLoadedWorld = false;
+    },
+    Awake: function() {
+        this.BuildZoneWaypoints();
 
+        // All units ready! Awaken!
+        worldHandler.LoopUnits(function(u){
+            u.Awake();
+        });
 
-    // World structure
-    // [zone][cx][cz]
-    this.world = {};
+        log("World has awaken!");
+        this.awake = true;
 
-    this.allNodes = {};
-
-    this.switches = {};
-
-    this.awake = false;
-    this.hasLoadedWorld = false;
-
-
-  },
-  Awake: function() {
-
-
-    this.BuildZoneWaypoints();
-
-
-
-    // All units ready! Awaken!
-    worldHandler.LoopUnits(function(u){
-      u.Awake();
-    });
-
-    log("World has awaken!");
-    this.awake = true;
-
-  //worldHandler.LoadSwitches();
-  },
+        //worldHandler.LoadSwitches();
+    },
   BuildZoneWaypoints: function() {
     // Load all waypoints!
 
@@ -206,26 +195,30 @@ var WorldHandler = Class.extend({
     log("Loaded "+count+" waypoints in total");
 
   },
-  Tick: function(dTime) {
+    Tick: function(dTime) {
+      if (!this.hasLoadedWorld) {
+          return;
+      }
 
-    if ( !this.hasLoadedWorld ) return;
+      if (!this.awake) {
+          var hasLoadedUnits = true;
 
-    if ( !this.awake ) {
-      var hasLoadedUnits = true;
+          this.LoopCells(function(cell) {
+              if (!cell.hasLoadedUnits) {
+                  hasLoadedUnits = false;
+              }
+          });
 
-      this.LoopCells(function(cell) {
-        if ( !cell.hasLoadedUnits ) hasLoadedUnits = false;
-      });
-
-      if ( hasLoadedUnits ) this.Awake();
-    }
-
-  },
-  SaveWorld: function() {
-    this.LoopCellsWithIndex(function(z, cx, cz) {
-      this.SaveCell(z, cx, cz);
-    });
-  },
+          if (hasLoadedUnits) {
+              this.Awake();
+          }
+      }
+    },
+    SaveWorld: function() {
+        this.LoopCellsWithIndex(function(z, cx, cz) {
+            this.SaveCell(z, cx, cz);
+        });
+    },
   DoFullBackup: function() {
       chatHandler.announceRoom('mods', "Backing up server...", "blue");
 
@@ -252,17 +245,43 @@ var WorldHandler = Class.extend({
           //console.log('child process exited with code ' + code);
       });
   },
-  CheckWorldStructure: function(zone, cx, cz) {
-    if ( !_.isUndefined(zone) && _.isUndefined(worldHandler.world[zone]) ) return false;
-    if ( !_.isUndefined(cx) && _.isUndefined(worldHandler.world[zone][cx]) ) return false;
-    if ( !_.isUndefined(cz) && _.isUndefined(worldHandler.world[zone][cx][cz]) ) return false;
-    return true;
-  },
-  BuildWorldStructure: function(zone, cx, cz) {
-    if ( !_.isUndefined(zone) && _.isUndefined(worldHandler.world[zone]) ) worldHandler.world[zone] = {};
-    if ( !_.isUndefined(cx) && _.isUndefined(worldHandler.world[zone][cx]) ) worldHandler.world[zone][cx] = {};
-    if ( !_.isUndefined(cz) && _.isUndefined(worldHandler.world[zone][cx][cz]) ) worldHandler.world[zone][cx][cz] = {};
-  },
+    CheckWorldStructure: function(zone, cx, cz) {
+        var self = this;
+
+        if (!_.isUndefined(zone) && _.isUndefined(self.world[zone])) {
+            return false;
+        }
+
+        if (!_.isUndefined(cx) && _.isUndefined(self.world[zone][cx])) {
+            return false;
+        }
+
+        if (!_.isUndefined(cz) && _.isUndefined(self.world[zone][cx][cz])) {
+            return false;
+        }
+
+        return true;
+    },
+    buildWorldStructure: function(zone, cx, cz) {
+        var self = this;
+
+        if (!_.isUndefined(zone) && _.isUndefined(self.world[zone])) {
+            self.world[zone] = {};
+        }
+
+        if (!_.isUndefined(cx) && _.isUndefined(self.world[zone][cx])) {
+            self.world[zone][cx] = {};
+        }
+
+        if (!_.isUndefined(cz) && _.isUndefined(self.world[zone][cx][cz])) {
+            self.world[zone][cx][cz] = {
+                graph: {},
+                objects: [],
+                units: [],
+                hasLoadedUnits: false
+            };
+        }
+    },
     LoadWorldLight: function() {
         var self = this,
             cellsLoaded = {},
@@ -284,10 +303,10 @@ var WorldHandler = Class.extend({
                     file = data[3];
 
                 if (!_.isNumber(zone) || !_.isNumber(cx) || !_.isNumber(cz)) {
-                  continue;
+                    continue;
                 }
 
-                worldHandler.BuildWorldStructure(zone, cx, cz);
+                self.buildWorldStructure(zone, cx, cz);
 
                 // Load navigation graph, even in a light world because we need it
                 if ( file === "graph.json" ) {
@@ -296,55 +315,50 @@ var WorldHandler = Class.extend({
                         var stats = fs.lstatSync(path + "/graph.json");
 
                         if (stats.isFile()) {
-                            worldHandler.world[zone][cx][cz].graph = JSON.parse(fs.readFileSync(path + "/graph.json", 'utf8'));
+                            self.world[zone][cx][cz].graph = JSON.parse(fs.readFileSync(path + "/graph.json", 'utf8'));
                         }
                     }
                     catch (e) {
                         throw e;
                     }
 
-                    worldHandler.world[zone][cx][cz].objects = [];
-                    worldHandler.world[zone][cx][cz].units = [];
-                    worldHandler.world[zone][cx][cz].hasLoadedUnits = false;
-
                     if (!cellsLoaded[zone]) {
                         cellsLoaded[zone] = 0;
                     }
                     cellsLoaded[zone]++;
 
-                    _.each(cellsLoaded, function(z, v) {
-                        log("Loaded " + z + " cells in zone " + v);
-                    });
-
-                    unitsToLoad.push(worldHandler.LoadUnits(zone, cx, cz)); // generate array of promises
+                    unitsToLoad.push(self.LoadUnits(zone, cx, cz)); // generate array of promises
                 } else {
                     continue;
                 }
             }
 
-            Q.all(unitsToLoad).then(function() {
+            Q.all(unitsToLoad).then(function(cellUnits) {
+                _.each(cellsLoaded, function(z, v) {
+                    log("Loaded " + z + " cells in zone " + v);
+                });
                 self.hasLoadedWorld = true;
             });
         });
     },
-  LoopUnits: function(fn) {
-    this.LoopCells(function(cell) {
-      if ( !_.isUndefined(cell.units) ) {
-        _.each(cell.units, function(unit) {
-          fn(unit);
+    LoopUnits: function(fn) {
+        this.LoopCells(function(cell) {
+            if ( !_.isUndefined(cell.units) ) {
+                _.each(cell.units, function(unit) {
+                    fn(unit);
+                });
+            }
         });
-      }
-    });
-  },
-  LoopUnitsNear: function(zone, cellX, cellZ, fn) {
-    this.LoopCellsNear(zone, cellX, cellZ, function(cell) {
-      if ( !_.isUndefined(cell.units) ) {
-        _.each(cell.units, function(unit) {
-          fn(unit);
+    },
+    LoopUnitsNear: function(zone, cellX, cellZ, fn) {
+        this.LoopCellsNear(zone, cellX, cellZ, function(cell) {
+            if ( !_.isUndefined(cell.units) ) {
+                _.each(cell.units, function(unit) {
+                    fn(unit);
+                });
+            }
         });
-      }
-    });
-  },
+    },
   LoopCells: function(fn) {
     _.each(this.world, function(zone) {
       _.each(zone, function(cellX) {
@@ -420,9 +434,10 @@ var WorldHandler = Class.extend({
                     promises.push(self.MakeUnitFromData(unitdata));
                 });
 
-                Q.all(promises).then(function() {
+                Q.all(promises).then(function(units) {
+                    self.world[zone][cellX][cellZ].units = units;
                     self.world[zone][cellX][cellZ].hasLoadedUnits = true;
-                    deferred.resolve();
+                    deferred.resolve(units);
                 });
             });
 
@@ -450,6 +465,7 @@ var WorldHandler = Class.extend({
             data.displayweapon = data.template.displayweapon;
 
             UnitFactory.create(data).then(function(unit) {
+                unit.template = template;
                 deferred.resolve(unit);
             });
         }, function(err) {
@@ -535,28 +551,21 @@ var WorldHandler = Class.extend({
     this.world[zone][cellX][cellZ].units = [];
 
   },
-  // <octaves>,<persistence> some discovered values:
-  // 1,4, 1-5, 2-2, 4-1, 5-1 -> small hills
-  // 2,5 mountains
-  // 2,3 somewhat more hillish
-  // 3,2 very rough, volcano
-  // 3-3 Very mountaneous, hard to navigate
-  // 3-4, 3-5, icepeaks :D
-  // 4-3 super sharp peaks
-  GenerateCell: function(zone, cellX, cellZ) {
+    // <octaves>,<persistence> some discovered values:
+    // 1,4, 1-5, 2-2, 4-1, 5-1 -> small hills
+    // 2,5 mountains
+    // 2,3 somewhat more hillish
+    // 3,2 very rough, volcano
+    // 3-3 Very mountaneous, hard to navigate
+    // 3-4, 3-5, icepeaks :D
+    // 4-3 super sharp peaks
+    GenerateCell: function(zone, cellX, cellZ) {
+        var self = this;
 
-    worldHandler.BuildWorldStructure(zone, cellX, cellZ);
-
-
-    this.world[zone][cellX][cellZ].units = [];
-    this.world[zone][cellX][cellZ].objects = [];
-    this.world[zone][cellX][cellZ].graph = {};
-
-    log("Generated cell ("+cellX+","+cellZ+")");
-
-    this.SaveCell(zone, cellX, cellZ, true);
-
-  },
+        self.buildWorldStructure(zone, cellX, cellZ);
+        log("Generated cell (" + cellX + "," + cellZ + ")");
+        self.SaveCell(zone, cellX, cellZ, true);
+    },
   SaveCell: function(zone, cellX, cellZ, clearObjects) {
 
 

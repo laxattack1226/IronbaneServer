@@ -86,6 +86,7 @@ var Unit = Class.extend({
 
     this.standingOnUnitId = 0;
 
+/*
     if (worldHandler.CheckWorldStructure(this.zone, this.cellX, this.cellZ)) {
       worldHandler.world[this.zone][this.cellX][this.cellZ].units.push(this);
     } else {
@@ -97,7 +98,7 @@ var Unit = Class.extend({
         worldHandler.GenerateCell(this.zone, this.cellX, this.cellZ);
         worldHandler.world[this.zone][this.cellX][this.cellZ].units.push(this);
       }
-    }
+    }*/
 
 
     this.startPosition = this.position.clone();
@@ -172,85 +173,71 @@ var Unit = Class.extend({
     this.cellZ = cellPos.z;
 
   },
-  AddOtherUnit: function(unit) {
-    // Auto send AddUnit if we're a player
-    this.otherUnits.push(unit);
+    AddOtherUnit: function(unit) {
+        //console.log('add other unit: ', unit.id, unit.template.name);
+        // Auto send AddUnit if we're a player
+        this.otherUnits.push(unit);
 
-    // Add the unit to ourselves clientside (only if WE are a player)
-    if ((this instanceof Player)) {
+        // Add the unit to ourselves clientside (only if WE are a player)
+        if ((this instanceof Player)) {
+          var packet = {
+              id: unit.id,
+              position: unit.position,
+              rotY: unit.rotation.y,
+              param: unit.param
+          };
 
-      var id = unit.id;
+          if (unit instanceof Fighter) {
+              packet.health = unit.health;
+              packet.armor = unit.armor;
+              packet.healthMax = unit.healthMax;
+              packet.armorMax = unit.armorMax;
+              packet.size = unit.size;
+              packet.skin = unit.skin;
+              packet.eyes = unit.eyes;
+              packet.hair = unit.hair;
+              packet.head = unit.head;
+              packet.body = unit.body;
+              packet.feet = unit.feet;
 
+              if (unit.id > 0) {
+                  // Add additional data to the packet
+                  packet.name = unit.name;
 
-      var packet = {
-        id: id,
-        position: unit.position,
-        rotY: unit.rotation.y,
-        param: unit.param
-      };
-
-
-      if (unit instanceof Fighter) {
-
-        packet.health = unit.health;
-        packet.armor = unit.armor;
-        packet.healthMax = unit.healthMax;
-        packet.armorMax = unit.armorMax;
-
-        packet.size = unit.size;
-
-        packet.skin = unit.skin;
-        packet.eyes = unit.eyes;
-        packet.hair = unit.hair;
-        packet.head = unit.head;
-        packet.body = unit.body;
-        packet.feet = unit.feet;
-
-        if (unit.id > 0) {
-          // Add additional data to the packet
-          packet.name = unit.name;
-
-          var item = unit.GetEquippedWeapon();
-          if (item) {
-            packet.weapon = item.template;
+                  var item = unit.GetEquippedWeapon();
+                  if (item) {
+                      packet.weapon = item.template;
+                  }
+              } else {
+                  if (unit.weapon && unit.displayweapon) {
+                      packet.weapon = unit.weapon.id;
+                  }
+              }
           }
 
-        } else {
-          if (unit.weapon && unit.displayweapon) {
-            packet.weapon = unit.weapon.id;
-          }
+          if (unit.id < 0) {
+                packet.template = unit.template.id;
+                console.log('addunit: ', unit.id, unit.template.id, unit.template.name);
+
+                if (unit.template.type === UnitTypeEnum.TRAIN ||
+                    unit.template.type === UnitTypeEnum.MOVINGOBSTACLE ||
+                    unit.template.type === UnitTypeEnum.TOGGLEABLEOBSTACLE) {
+                    packet.rotX = unit.rotation.x;
+                    packet.rotZ = unit.rotation.z;
+                }
+
+                if (unit.template.type === UnitTypeEnum.LEVER || unit.template.type === UnitTypeEnum.TOGGLEABLEOBSTACLE) {
+                    unit.data.on = unit.on;
+                }
+
+                if (unit.template.special) {
+                    packet.metadata = unit.data;
+                }
+            }
+
+            this.socket.emit("addUnit", packet);
         }
-      }
-
-      if (unit.id < 0) {
-        packet.template = unit.template.id;
-
-        if (unit.template.type === UnitTypeEnum.TRAIN ||
-          unit.template.type === UnitTypeEnum.MOVINGOBSTACLE ||
-          unit.template.type === UnitTypeEnum.TOGGLEABLEOBSTACLE) {
-          packet.rotX = unit.rotation.x;
-          packet.rotZ = unit.rotation.z;
-        }
-
-        if (unit.template.type === UnitTypeEnum.LEVER || unit.template.type === UnitTypeEnum.TOGGLEABLEOBSTACLE) {
-          unit.data.on = unit.on;
-        }
-
-        if (unit.template.special) {
-          packet.metadata = unit.data;
-        }
-
-
-
-      }
-
-
-      this.socket.emit("addUnit", packet);
-
-    }
-
-
-  },
+    },
   RemoveOtherUnit: function(unit) {
     // Auto send AddUnit if we're a player
 
@@ -266,49 +253,50 @@ var Unit = Class.extend({
 
 
   },
-  UpdateOtherUnitsList: function() {
-
-    // If we are a player, only do so if we're ready to receive data
-    if (this.id > 0 && !this.readyToReceiveUnits) return;
-
-    // We have two lists
-    // There is a list of units we currently have, and a list that we will have once we recalculate
-    // If an item is in the first list, but no longer in the second list, do RemoveOtherUnit
-    // If an item is in the first & second list, don't do anything
-    // If an item is only in the last list, do AddOtherUnit
-    var firstList = this.otherUnits;
-    var secondList = [];
-
-    // Loop over the world cells nearby and add all units
-    var cx = this.cellX;
-    var cz = this.cellZ;
-
-
-
-    for (var x = cx - 1; x <= cx + 1; x++) {
-      for (var z = cz - 1; z <= cz + 1; z++) {
-        if (worldHandler.CheckWorldStructure(this.zone, x, z)) {
-          _.each(worldHandler.world[this.zone][x][z].units, function(unit) {
-            if (unit !== this) secondList.push(unit);
-          }, this);
+    UpdateOtherUnitsList: function() {
+        // If we are a player, only do so if we're ready to receive data
+        if (this.id > 0 && !this.readyToReceiveUnits) {
+          return;
         }
-      }
-    }
 
-    for (var i = 0; i < firstList.length; i++) {
-      if (secondList.indexOf(firstList[i]) == -1) {
-        // Not found in the second list, so remove it
-        this.RemoveOtherUnit(firstList[i]);
-      }
-    }
-    for (var i = 0; i < secondList.length; i++) {
-      if (firstList.indexOf(secondList[i]) == -1) {
-        // Not found in the first list, so add it
-        this.AddOtherUnit(secondList[i]);
-      }
-    }
+        // We have two lists
+        // There is a list of units we currently have, and a list that we will have once we recalculate
+        // If an item is in the first list, but no longer in the second list, do RemoveOtherUnit
+        // If an item is in the first & second list, don't do anything
+        // If an item is only in the last list, do AddOtherUnit
+        var firstList = this.otherUnits;
+        var secondList = [];
 
-  },
+        // Loop over the world cells nearby and add all units
+        var cx = this.cellX;
+        var cz = this.cellZ;
+
+        for (var x = cx - 1; x <= cx + 1; x++) {
+            for (var z = cz - 1; z <= cz + 1; z++) {
+                if (worldHandler.CheckWorldStructure(this.zone, x, z)) {
+                    _.each(worldHandler.world[this.zone][x][z].units, function(unit) {
+                        if (unit !== this) {
+                            secondList.push(unit);
+                        }
+                    }, this);
+                }
+            }
+        }
+
+        for (var i = 0; i < firstList.length; i++) {
+          if (secondList.indexOf(firstList[i]) === -1) {
+              // Not found in the second list, so remove it
+              this.RemoveOtherUnit(firstList[i]);
+          }
+        }
+
+        for (var j = 0; j < secondList.length; j++) {
+            if (firstList.indexOf(secondList[j]) === -1) {
+                // Not found in the first list, so add it
+                this.AddOtherUnit(secondList[j]);
+            }
+        }
+    },
   FindNearestUnit: function(maxDistance) {
     maxDistance = maxDistance || 0;
     var cx = this.cellX;
