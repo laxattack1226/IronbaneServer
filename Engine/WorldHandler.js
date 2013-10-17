@@ -319,6 +319,7 @@ var WorldHandler = Class.extend({
                         }
                     }
                     catch (e) {
+                        console.log("error loading graph", e);
                         throw e;
                     }
 
@@ -338,6 +339,8 @@ var WorldHandler = Class.extend({
                     log("Loaded " + z + " cells in zone " + v);
                 });
                 self.hasLoadedWorld = true;
+            }, function(err) {
+                console.log('error loading zone units!', err);
             });
         });
     },
@@ -438,6 +441,9 @@ var WorldHandler = Class.extend({
                     self.world[zone][cellX][cellZ].units = units;
                     self.world[zone][cellX][cellZ].hasLoadedUnits = true;
                     deferred.resolve(units);
+                }, function(err) {
+                   console.error('Error in LoadUnits: ', err);
+                   return deferred.reject(err);
                 });
             });
 
@@ -465,7 +471,6 @@ var WorldHandler = Class.extend({
             data.displayweapon = data.template.displayweapon;
 
             UnitFactory.create(data).then(function(unit) {
-                unit.template = template;
                 deferred.resolve(unit);
             });
         }, function(err) {

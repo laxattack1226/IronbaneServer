@@ -217,7 +217,7 @@ var Unit = Class.extend({
 
           if (unit.id < 0) {
                 packet.template = unit.template.id;
-                console.log('addunit: ', unit.id, unit.template.id, unit.template.name);
+                //console.log('addunit: ', unit.id, unit.template.id, unit.template.name);
 
                 if (unit.template.type === UnitTypeEnum.TRAIN ||
                     unit.template.type === UnitTypeEnum.MOVINGOBSTACLE ||

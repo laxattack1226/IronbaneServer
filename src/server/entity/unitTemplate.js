@@ -71,7 +71,7 @@ var getAll = function(query) {
 };
 
 UnitTemplate.get = function(query) {
-    if (_.isString(query)) {
+    if (!_.isObject(query)) {
         // assume id
         return getById(query);
     } else {
