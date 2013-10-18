@@ -1784,16 +1784,16 @@ var SocketHandler = Class.extend({
                 var nodeInfo = nodeHandler.GetNodeArrayIndex(zone, data.id);
                 if ( !nodeInfo ) return;
 
+
                 var position = nodeHandler.GetNodePosition(zone, data.id);
-
-                var cellPos = WorldToCellCoordinates(position.x, position.z, cellSize);
-                worldHandler.SaveCell(zone, cellPos.x, cellPos.z);
-
 
                 nodeHandler.DeleteNode(zone, data.id);
 
 
 
+
+                var cellPos = WorldToCellCoordinates(position.x, position.z, cellSize);
+                worldHandler.SaveCell(zone, cellPos.x, cellPos.z);
 
 
                 socket.unit.EmitNearby("ppDeleteNode", data, 0, true);
