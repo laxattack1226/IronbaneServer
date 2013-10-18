@@ -291,7 +291,8 @@ var WorldHandler = Class.extend({
 
         util.walk(dataPath, function(err, results) {
             if (err) {
-              throw err;
+                console.error('Error in LoadWorldLight! [walk]', err);
+                return;
             }
 
             for (var r = 0, rl = results.length; r < rl; r++) {
@@ -328,6 +329,7 @@ var WorldHandler = Class.extend({
                     }
                     cellsLoaded[zone]++;
 
+                    //console.log('load units for: ', zone, cx, cz);
                     unitsToLoad.push(self.LoadUnits(zone, cx, cz)); // generate array of promises
                 } else {
                     continue;
@@ -335,6 +337,8 @@ var WorldHandler = Class.extend({
             }
 
             Q.all(unitsToLoad).then(function(cellUnits) {
+                console.log('units loaded!', cellUnits.length);
+
                 _.each(cellsLoaded, function(z, v) {
                     log("Loaded " + z + " cells in zone " + v);
                 });
@@ -472,17 +476,21 @@ var WorldHandler = Class.extend({
 
             UnitFactory.create(data).then(function(unit) {
                 deferred.resolve(unit);
+            }, function(err) {
+                console.error('unit factory error: ', err);
+                deferred.reject('UFC Error: ' + err);
             });
         }, function(err) {
             log("Warning! Unit template " + data.template + " not found!");
             log("Cleaning up MySQL...");
 
             mysql.query('DELETE FROM ib_units WHERE template = ?', [data.template], function(err) {
-              if (err) {
-                  throw err;
-              }
+                if (err) {
+                    deferred.reject('error deleting bad template');
+                    return;
+                }
 
-              deferred.reject('unit template not found.');
+                deferred.reject('unit template not found.');
             });
         });
 

@@ -81,7 +81,9 @@ ItemTemplate.getAll = function() {
             }
             var templates = [];
             _.each(results, function(row) {
-                templates.push(new ItemTemplate(row));
+                var it = new ItemTemplate(row);
+                cache.put(it.id, it);
+                templates.push(it);
             });
 
             deferred.resolve(templates);
