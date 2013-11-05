@@ -18,10 +18,12 @@
 // Create and populate the dictionary dictonary
 var dictionary = {};
 
-/* dare. */dictionary.dare = "How do you dare talking to me";
+/* dare. */dictionary.dare = "How dare you talk to me";
 /* leave. */dictionary.leave = "Leave me alone";
 /* defeat. */dictionary.leave = "You will never defeat me";
 /* castle. */dictionary.leave = "The castle is mine, stay out";
+/* real. */dictionary.real = "I am the real Ironbane"
+/* beat. */dictionart.beat = "You will never beat me! Hiss!"
 
 module.exports = dictionary;
 
