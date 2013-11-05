@@ -21,6 +21,7 @@ var dictionary = {};
 /* hi. */dictionary.hi = /(hi)/i;
 /* hey. */dictionary.hey = /(hey)/i;
 /* hello. */dictionary.hey = /(hello)/i;
+/* sup. */dictionary.hey = /(sup)/i;
 
 module.exports = dictionary;
 
