@@ -27,12 +27,12 @@ var dictionary = {};
 /* pee. */dictionary.pee = "I pee on the street";
 /* cuddle. */dictionary.cuddle = "I cuddle trees during weekends";
 /* lick. */dictionary.lick = "I can lick my toes :)";
-/* bird. */dictionary.bird = "A bird pecked my pinky scab :("; //tits, boobies, hooters, etc. are birds...
+/* bird. */dictionary.bird = "A bird pecked my pinky scab :(";
 /* dog */dictionary.dog = "My dog is a royal magesty";
 /* cat. */dictionary.cat = "I am a cat; I have nine lives";
 /* chicken */dictionary.chicken = "There is a man eating chicken in my house";
-/* nigger */dictionary.nigger = "Black people, like Usain Bolt, are usually fast runners";
-/* genetalia */dictionary.genetalia = "I am not a human with a body";
+/* black */dictionary.black = "Black people, like Usain Bolt, are usually fast runners";
+/* stuff */dictionary.stuff = "I am not a human with a body";
 /* butt. */dictionary.butt = "I still take third grade science";
 /* hula. */dictionary.hula = "I sometimes like to hula hoop naked";
 /* noises. */dictionary.noises = "I'm afraid of the noises that typewriters make";
@@ -44,8 +44,23 @@ var dictionary = {};
 /* men. */dictionary.men = "It's raining men! Halleluja it's raining men! Hey hey";
 /* model. */dictionary.model = "Miley Cyrus is my role model";
 /* poop. */dictionary.poop = "I acceidentally pooped in my pants";
-/* big */dictionary.big = "I will always use big-boy words";
-/* anger */dictionary.anger = "I unleash my anger on my computer";
+/* big. */dictionary.big = "I will always use big-boy words";
+/* anger. */dictionary.anger = "I unleash my anger on my computer";
+/* smelly. */dictionary.smelly = "My armpits are smellier than my bellybutton";
+/* blue. */dictionary.blue = "I sometimes get blue pee";
+/* monster. */dictionary.monster = "There is a monster under my bed";
+/* gross. */dictionary.gross = "The pee spot in my bed is gross";
+
+//At this point, i'm not a big fan of 1D or any boy singers
+
+/* horan. */dictionary.horan = "OMG Niall Horan is hot hot hot";
+/* malik. */dictionary.malik = "OMG Zayn Malik is hot hot hot";
+/* styles. */dictionary.styles = "OMG Harry Styles is hot hot hot";
+/* tomlinson. */dictionary.tomlinson = "OMG Louis Tomlinson is hot hot hot";
+/* payne. */dictionary.payne = "OMG Liam Payne is hot hot hot";
+/* sheeran. */dictionary.sheeran = "I can't wait to hug Ed Sheeran";
+
+//Okay, done with dat hating
 
 
 module.exports = dictionary;
