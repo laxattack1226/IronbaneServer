@@ -27,6 +27,7 @@ var dictionary = {};
 /* dragon. */dictionary.dragon = "I am the great and almighty dragon";
 /* wings. */dictionary.wings = "I will use my wings to dissipate the world";
 /* laugh */dictionary.laugh = "Muahahahahahaha! You will disperse under my command";
+/* burn */dictionary.burn = "I will smile as I watch you burn into smoldering ashes";
 
 module.exports = dictionary;
 
