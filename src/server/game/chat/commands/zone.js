@@ -41,7 +41,7 @@ module.exports = function(items, units, worldHandler, chatHandler) {
 						errorMessage = "Player not found";
 						chatHandler.announcePersonally(unit, errorMessage, "yellow");
 					} else {
-						var message = player.name + " is now in " + result[0].name;
+						var message = player.name + " is currently in " + result[0].name;
 						chatHandler.announcePersonally(unit, message, "yellow");
 					}
 				}
