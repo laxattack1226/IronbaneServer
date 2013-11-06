@@ -22,8 +22,11 @@ var dictionary = {};
 /* leave. */dictionary.leave = "Leave me alone";
 /* defeat. */dictionary.leave = "You will never defeat me";
 /* castle. */dictionary.leave = "The castle is mine, stay out";
-/* real. */dictionary.real = "I am the real Ironbane"
-/* beat. */dictionart.beat = "You will never beat me! Hiss!"
+/* real. */dictionary.real = "I am the real Ironbane";
+/* beat. */dictionary.beat = "You will never beat me! Hiss!";
+/* dragon. */dictionary.dragon = "I am the great and almighty dragon";
+/* wings. */dictionary.wings = "I will use my wings to dissipate the world";
+/* laugh */dictionary.laugh = "Muahahahahahaha! You will disperse under my command";
 
 module.exports = dictionary;
 
