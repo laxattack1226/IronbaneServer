@@ -29,6 +29,10 @@ var dictionary = {};
 /* service. */dictionary.service = "Ironbot, at your service";
 /* dismissed. */dicitonary.dismissed = "Ironbot, dismissed";
 /* poor. */dicitonary.poor = "Helping the poor, one bot at a time";
+/* protect. */dictionary.protect = "I will protect you from Ironbane";
+/* safe. */dictionary.safe = "Ravenwood is a safe place";
+/* dangerous. */dicitonary = "Leaving Ravenwood is dangerous";
+/* slimes. */dicitonary.slimes = "Killing slimes is the easiest way to earn profit";
 
 module.exports = dictionary;
 
