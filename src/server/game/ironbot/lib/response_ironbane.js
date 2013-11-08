@@ -26,8 +26,13 @@ var dictionary = {};
 /* beat. */dictionary.beat = "You will never beat me! Hiss!";
 /* dragon. */dictionary.dragon = "I am the great and almighty dragon";
 /* wings. */dictionary.wings = "I will use my wings to dissipate the world";
-/* laugh */dictionary.laugh = "Muahahahahahaha! You will disperse under my command";
-/* burn */dictionary.burn = "I will smile as I watch you burn into smoldering ashes";
+/* laugh. */dictionary.laugh = "Muahahahahahaha! You will disperse under my command";
+/* burn. */dictionary.burn = "I will smile as I watch you burn into smoldering ashes";
+/* cry. */dictionary.cry = "Cry as much as you want; you will all die";
+/* death. */dictionary.death = "Say my name one more time, and death will come your way";
+/* fear. */dictionary.fear = "Your fear will overcome you, and I will rule";
+/* one. */dictionary.one = "Do not count on the one, he is hopeless";
+/* pointless. */dicitonary.pointless = "It is pointless to try and defeat me";
 
 module.exports = dictionary;
 
