@@ -31,8 +31,9 @@ var dictionary = {};
 /* poor. */dicitonary.poor = "Helping the poor, one bot at a time";
 /* protect. */dictionary.protect = "I will protect you from Ironbane";
 /* safe. */dictionary.safe = "Ravenwood is a safe place";
-/* dangerous. */dicitonary = "Leaving Ravenwood is dangerous";
+/* dangerous. */dicitonary.dangerous = "Leaving Ravenwood is dangerous";
 /* slimes. */dicitonary.slimes = "Killing slimes is the easiest way to earn profit";
+/* languages. */dicitonary.languages = "I speak many languages. Ich spreche viele Sprachen"
 
 module.exports = dictionary;
 
